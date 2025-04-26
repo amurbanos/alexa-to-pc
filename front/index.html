@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gerenciador de Comandos Alexa</title>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <style>
+        .container { margin-top: 2rem; }
+        .form-group { margin-bottom: 1rem; }
+        .export-section { margin-top: 2rem; }
+        #jsonOutput { 
+            width: 100%; 
+            height: 200px; 
+            margin-top: 1rem;
+            font-family: monospace;
+        }
+        .action-buttons {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            z-index: 1000;
+        }
+        .action-buttons .btn {
+            margin-left: 10px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        }
+    </style>
+</head>
+<body>
+    <div id="app" class="container">
+        <h1 class="mb-4">Gerenciador de Comandos Alexa</h1>
+        
+        <!-- Lista de Comandos -->
+        <div class="card">
+            <div class="card-body">
+                <h3>Lista de Comandos</h3>
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Nome</th>
+                            <th>Samples</th>
+                            <th>Comando Shell</th>
+                            <th>Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr v-for="(comando, index) in comandos" :key="index">
+                            <td>{{ comando.name }}</td>
+                            <td>{{ comando.samples }}</td>
+                            <td>{{ comando.comandsh }}</td>
+                            <td>
+                                <button @click="editarComando(index)" class="btn btn-sm btn-warning me-2">Editar</button>
+                                <button @click="excluirComando(index)" class="btn btn-sm btn-danger">Excluir</button>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Botões de Ação Flutuantes -->
+        <div class="action-buttons">
+            <button @click="abrirModalFormulario" class="btn btn-primary btn-lg rounded-circle">
+                <i class="bi bi-plus-lg"></i> +
+            </button>
+            <button @click="abrirModalExportacao" class="btn btn-success btn-lg rounded-circle">
+                <i class="bi bi-download"></i> ↓
+            </button>
+        </div>
+
+        <!-- Modal do Formulário -->
+        <div class="modal fade" id="formularioModal" tabindex="-1">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">{{ editando ? 'Editar Comando' : 'Novo Comando' }}</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="form-group">
+                            <label>Nome do Comando</label>
+                            <input type="text" class="form-control" v-model="formComando.name">
+                        </div>
+                        <div class="form-group">
+                            <label>Samples (Exemplos de Fala)</label>
+                            <textarea class="form-control" v-model="formComando.samples" rows="3" 
+                                    placeholder="Digite um exemplo por linha"></textarea>
+                        </div>
+                        <div class="form-group">
+                            <label>Comando Shell</label>
+                            <input type="text" class="form-control" v-model="formComando.comandsh">
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                        <button @click="salvarComando" class="btn btn-primary" data-bs-dismiss="modal">
+                            {{ editando ? 'Atualizar' : 'Adicionar' }}
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal de Exportação -->
+        <div class="modal fade" id="exportacaoModal" tabindex="-1">
+            <div class="modal-dialog modal-lg">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Exportar para Amazon</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <button @click="gerarJsonAmazon" class="btn btn-success">Gerar JSON da Amazon</button>
+                        <button @click="copiarJson" class="btn btn-info ms-2">Copiar JSON</button>
+                        <textarea id="jsonOutput" class="form-control mt-3" readonly v-model="jsonAmazon"></textarea>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const { createApp } = Vue
+
+        createApp({
+            data() {
+                return {
+                    comandos: [],
+                    formComando: {
+                        name: '',
+                        samples: '',
+                        comandsh: ''
+                    },
+                    editando: false,
+                    indiceEditando: null,
+                    jsonAmazon: '',
+                    formularioModal: null,
+                    exportacaoModal: null
+                }
+            },
+            methods: {
+                abrirModalFormulario() {
+                    this.limparFormulario();
+                    this.editando = false;
+                    this.indiceEditando = null;
+                    this.formularioModal.show();
+                },
+                abrirModalExportacao() {
+                    this.exportacaoModal.show();
+                },
+                salvarComando() {
+                    if (this.editando) {
+                        this.comandos[this.indiceEditando] = {...this.formComando}
+                        this.editando = false
+                        this.indiceEditando = null
+                    } else {
+                        this.comandos.push({...this.formComando})
+                    }
+                    this.limparFormulario()
+                    this.salvarNoLocalStorage()
+                },
+                editarComando(index) {
+                    this.formComando = {...this.comandos[index]}
+                    this.editando = true
+                    this.indiceEditando = index
+                    this.formularioModal.show()
+                },
+                excluirComando(index) {
+                    if (confirm('Tem certeza que deseja excluir este comando?')) {
+                        this.comandos.splice(index, 1)
+                        this.salvarNoLocalStorage()
+                    }
+                },
+                limparFormulario() {
+                    this.formComando = {
+                        name: '',
+                        samples: '',
+                        comandsh: ''
+                    }
+                },
+                salvarNoLocalStorage() {
+                    localStorage.setItem('alexa-comandos', JSON.stringify(this.comandos))
+                    // Salvar também no arquivo JSON para o backend
+                    this.salvarNoBackend()
+                },
+                async salvarNoBackend() {
+                    try {
+                        const response = await fetch('/api/commands', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify(this.comandos)
+                        });
+                        
+                        if (!response.ok) {
+                            throw new Error('Erro ao salvar comandos no backend');
+                        }
+                    } catch (error) {
+                        console.error('Erro ao salvar comandos:', error);
+                    }
+                },
+                carregarDoLocalStorage() {
+                    const dados = localStorage.getItem('alexa-comandos')
+                    if (dados) {
+                        this.comandos = JSON.parse(dados)
+                    }
+                },
+                gerarJsonAmazon() {
+                    const intents = this.comandos.map(comando => ({
+                        name: comando.name,
+                        samples: comando.samples.split('\n').filter(sample => sample.trim())
+                    }));
+
+                    const interactionModel = {
+                        interactionModel: {
+                            languageModel: {
+                                invocationName: "pc max",
+                                intents: [
+                                    ...intents,
+                                    {
+                                        name: "AMAZON.HelpIntent",
+                                        samples: []
+                                    },
+                                    {
+                                        name: "AMAZON.StopIntent",
+                                        samples: []
+                                    },
+                                    {
+                                        name: "AMAZON.CancelIntent",
+                                        samples: []
+                                    }
+                                ]
+                            }
+                        }
+                    };
+
+                    this.jsonAmazon = JSON.stringify(interactionModel, null, 4);
+                },
+                copiarJson() {
+                    const textarea = document.getElementById('jsonOutput');
+                    textarea.select();
+                    document.execCommand('copy');
+                    alert('JSON copiado para a área de transferência!');
+                }
+            },
+            mounted() {
+                this.carregarDoLocalStorage();
+                this.formularioModal = new bootstrap.Modal(document.getElementById('formularioModal'));
+                this.exportacaoModal = new bootstrap.Modal(document.getElementById('exportacaoModal'));
+            }
+        }).mount('#app')
+    </script>
+</body>
+</html> 

@@ -1,0 +1,12 @@
+[
+  {
+    "name": "Youtube",
+    "samples": "youtube",
+    "comandsh": "open -a Firefox https://www.youtube.com"
+  },
+  {
+    "name": "Cursor",
+    "samples": "cursor",
+    "comandsh": "cursor"
+  }
+]
