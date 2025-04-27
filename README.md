@@ -19,7 +19,7 @@ npm install
 
 ## Configuração
 
-1. Crie um arquivo `.env` na raiz do projeto com as seguintes variáveis:
+1. Crie um arquivo `.env` na pasta ./api do projeto com as seguintes variáveis:
 ```
 PORT=3000
 ALEXA_SKILL_ID=seu_skill_id
