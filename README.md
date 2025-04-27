@@ -1,6 +1,6 @@
-# Alexa VSCode Controller
+# Alexa PC Controller
 
-Este projeto permite abrir o Visual Studio Code através de comandos de voz da Alexa.
+Este projeto executar comandos no pc através da Amazon Alexa.
 
 ## Requisitos
 
