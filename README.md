@@ -6,7 +6,6 @@ Este projeto executar comandos no pc através da Amazon Alexa.
 
 - Node.js (versão 14 ou superior)
 - NPM (geralmente vem com o Node.js)
-- Visual Studio Code instalado
 - Conta de desenvolvedor da Alexa
 - ngrok (para expor seu servidor local)
 
